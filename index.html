@@ -98,6 +98,11 @@
       <input id="countSlider" type="range" min="1" max="20" value="5" />
     </div>
 
+    <div class="row">
+      <label for="speedSlider">Vorlese-Geschwindigkeit: <span id="speedValue" class="value">1.0</span>x</label>
+      <input id="speedSlider" type="range" min="0.5" max="1.5" step="0.1" value="1.0" />
+    </div>
+
     <div class="row inline">
       <input id="reverseMode" type="checkbox" />
       <label for="reverseMode" style="margin:0; font-weight:500;">In umgekehrter Reihenfolge eingeben</label>
@@ -122,6 +127,8 @@
   <script>
     const slider = document.getElementById('countSlider');
     const countValue = document.getElementById('countValue');
+    const speedSlider = document.getElementById('speedSlider');
+    const speedValue = document.getElementById('speedValue');
     const reverseMode = document.getElementById('reverseMode');
     const speakBtn = document.getElementById('speakBtn');
     const answerInput = document.getElementById('answerInput');
@@ -132,6 +139,10 @@
 
     slider.addEventListener('input', () => {
       countValue.textContent = slider.value;
+    });
+
+    speedSlider.addEventListener('input', () => {
+      speedValue.textContent = Number(speedSlider.value).toFixed(1);
     });
 
     function randomDigit() {
@@ -148,7 +159,7 @@
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(digits.join(' '));
       utterance.lang = 'de-DE';
-      utterance.rate = 0.8;
+      utterance.rate = Number(speedSlider.value);
       utterance.onend = () => {
         answerInput.disabled = false;
         checkBtn.disabled = false;
@@ -194,10 +205,10 @@
       }
 
       if (rawInput === targetText) {
-        result.textContent = `Perfekt! Alles richtig (${correctCount}/${targetText.length}).`;
+        result.textContent = `Perfekt! Alles richtig (${correctCount}/${targetText.length}). Lösung: ${targetText}`;
         result.className = 'ok';
       } else {
-        result.textContent = `Nicht ganz richtig. Richtige Positionen: ${correctCount}/${targetText.length}.`;
+        result.textContent = `Nicht ganz richtig. Richtige Positionen: ${correctCount}/${targetText.length}. Richtige Lösung: ${targetText}`;
         result.className = 'bad';
       }
     });
