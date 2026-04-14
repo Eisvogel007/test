@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zahlen-Merkspiel</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f4f6fb;
+      color: #1a1a1a;
+    }
+    .card {
+      width: min(560px, 92vw);
+      background: #fff;
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 1.4rem;
+    }
+    .muted {
+      margin-top: 0;
+      color: #444;
+      font-size: 0.95rem;
+    }
+    .row {
+      margin: 1rem 0;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    .value {
+      font-weight: 700;
+      color: #1257c7;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+      background: #1257c7;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .inline {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 500;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: 1px solid #bbb;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    #result {
+      min-height: 1.2rem;
+      font-weight: 700;
+      margin-top: 0.75rem;
+    }
+    .ok { color: #138a26; }
+    .bad { color: #c12424; }
+    .hint {
+      font-size: 0.85rem;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>Zahlen-Merkspiel</h1>
+    <p class="muted">Wähle die Anzahl der Zahlen, höre sie dir an und gib sie danach ein.</p>
+
+    <div class="row">
+      <label for="countSlider">Anzahl der Zahlen: <span id="countValue" class="value">5</span></label>
+      <input id="countSlider" type="range" min="1" max="20" value="5" />
+    </div>
+
+    <div class="row inline">
+      <input id="reverseMode" type="checkbox" />
+      <label for="reverseMode" style="margin:0; font-weight:500;">In umgekehrter Reihenfolge eingeben</label>
+    </div>
+
+    <div class="row">
+      <button id="speakBtn">Zahlen vorlesen</button>
+      <p class="hint">Die Zahlen werden nicht angezeigt, nur vorgelesen.</p>
+    </div>
+
+    <div class="row">
+      <label for="answerInput">Deine Eingabe (z. B. 12345):</label>
+      <input id="answerInput" type="text" inputmode="numeric" autocomplete="off" placeholder="Zahlen hier eingeben" disabled />
+    </div>
+
+    <div class="row">
+      <button id="checkBtn" disabled>Bestätigen</button>
+      <p id="result" aria-live="polite"></p>
+    </div>
+  </main>
+
+  <script>
+    const slider = document.getElementById('countSlider');
+    const countValue = document.getElementById('countValue');
+    const reverseMode = document.getElementById('reverseMode');
+    const speakBtn = document.getElementById('speakBtn');
+    const answerInput = document.getElementById('answerInput');
+    const checkBtn = document.getElementById('checkBtn');
+    const result = document.getElementById('result');
+
+    let sequence = [];
+
+    slider.addEventListener('input', () => {
+      countValue.textContent = slider.value;
+    });
+
+    function randomDigit() {
+      return Math.floor(Math.random() * 10);
+    }
+
+    function readDigitsAloud(digits) {
+      if (!('speechSynthesis' in window)) {
+        result.textContent = 'Dein Browser unterstützt Vorlesen leider nicht.';
+        result.className = 'bad';
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(digits.join(' '));
+      utterance.lang = 'de-DE';
+      utterance.rate = 0.8;
+      utterance.onend = () => {
+        answerInput.disabled = false;
+        checkBtn.disabled = false;
+        answerInput.focus();
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    speakBtn.addEventListener('click', () => {
+      const count = Number(slider.value);
+      sequence = Array.from({ length: count }, randomDigit);
+
+      result.textContent = reverseMode.checked
+        ? 'Höre gut zu und gib die Zahlen danach rückwärts ein.'
+        : 'Höre gut zu und gib die Zahlen danach in gleicher Reihenfolge ein.';
+      result.className = '';
+
+      answerInput.value = '';
+      answerInput.disabled = true;
+      checkBtn.disabled = true;
+
+      readDigitsAloud(sequence);
+    });
+
+    checkBtn.addEventListener('click', () => {
+      const rawInput = answerInput.value.replace(/\s+/g, '');
+      if (!rawInput) {
+        result.textContent = 'Bitte gib zuerst Zahlen ein.';
+        result.className = 'bad';
+        return;
+      }
+
+      const target = reverseMode.checked ? [...sequence].reverse() : sequence;
+      const targetText = target.join('');
+
+      let correctCount = 0;
+      const maxLen = Math.min(rawInput.length, targetText.length);
+      for (let i = 0; i < maxLen; i += 1) {
+        if (rawInput[i] === targetText[i]) {
+          correctCount += 1;
+        }
+      }
+
+      if (rawInput === targetText) {
+        result.textContent = `Perfekt! Alles richtig (${correctCount}/${targetText.length}).`;
+        result.className = 'ok';
+      } else {
+        result.textContent = `Nicht ganz richtig. Richtige Positionen: ${correctCount}/${targetText.length}.`;
+        result.className = 'bad';
+      }
+    });
+  </script>
+</body>
+</html>
